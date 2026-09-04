@@ -1,0 +1,6 @@
+{
+  "name": "FuerzaFit - Gestión de Gimnasios",
+  "description": "Plataforma integral de gestión de gimnasios y estudios de entrenamiento para LATAM con roles de Administrador y Socio, rutinas interactivas, Mercado Pago, reservas, control de acceso por DNI/QR y terminal de molinete.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
