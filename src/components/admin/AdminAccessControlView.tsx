@@ -106,8 +106,15 @@ export const AdminAccessControlView: React.FC = () => {
     }
   };
 
-  // Pop-up DNI para que el socio tipee - sin QR, sin ruta nueva
+  // Pop-up DNI para que el socio tipee - con teclado disponible, sin QR, sin ruta nueva
+  // Soporta Electron (ventana nativa) o browser (window.open)
   const openDniPopup = () => {
+    // Si estamos en Electron (desktop), usar IPC para abrir ventana nativa
+    const wDesktop: any = (window as any).fuerzaFitDesktop;
+    if (wDesktop && wDesktop.openDniWindow) {
+      wDesktop.openDniWindow();
+      return;
+    }
     const w = window.open('', '_blank', 'width=420,height=560,left=200,top=100');
     if (!w) {
       alert('Pop-up bloqueado. Permitir ventanas emergentes para este sitio.');
@@ -126,21 +133,40 @@ export const AdminAccessControlView: React.FC = () => {
         button{width:100%;margin-top:12px;padding:14px;border-radius:16px;border:0;background:#10b981;color:#020617;font-weight:900;font-size:14px;cursor:pointer}
         button:active{transform:scale(0.98)}
         .hint{font-size:11px;color:#64748b;margin-top:12px}
+        .kb{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+        .kb button{background:#1e293b;color:#fff;border:1px solid #334155;padding:12px;border-radius:12px;font-size:18px;font-weight:800}
+        .kb button:active{background:#0f172a}
       </style></head><body>
       <div class="card">
         <h1>Ingresá tu DNI</h1>
         <p>Te lo muestra el admin. Tipéalo y presioná Ingresar.</p>
         <input id="dni" inputmode="numeric" autocomplete="off" placeholder="38.456.789" maxlength="9" autofocus />
+        <div class="kb" id="kb"></div>
         <button id="btn">Ingresar →</button>
-        <div class="hint">Se valida al instante en recepción. No se guarda el QR.</div>
+        <div class="hint">Teclado disponible en pantalla. Se valida al instante.</div>
       </div>
       <script>
         const inp=document.getElementById('dni');
         const btn=document.getElementById('btn');
+        const kb=document.getElementById('kb');
+        const keys=['1','2','3','4','5','6','7','8','9','⌫','0','✓'];
+        keys.forEach(k=>{
+          const b=document.createElement('button');
+          b.textContent=k;
+          b.onclick=()=>{
+            if(k==='⌫'){ inp.value=inp.value.slice(0,-1); }
+            else if(k==='✓'){ send(); }
+            else { if(inp.value.replace(/[^0-9]/g,'').length<9) inp.value+=k; }
+            inp.focus();
+          };
+          kb.appendChild(b);
+        });
         function send(){
           const v=inp.value.replace(/[^0-9]/g,'');
           if(!v) return;
           if(window.opener){ window.opener.postMessage({type:'fuerzafit-dni', dni:v}, '*'); }
+          // Para Electron, también intentar via API
+          if(window.fuerzaFitDesktop && window.fuerzaFitDesktop.submitDni){ window.fuerzaFitDesktop.submitDni(v); }
           window.close();
         }
         btn.onclick=send;
@@ -151,7 +177,7 @@ export const AdminAccessControlView: React.FC = () => {
     w.document.close();
   };
 
-  // Escucha DNI tipeado en el pop-up
+  // Escucha DNI tipeado en el pop-up (browser + Electron)
   React.useEffect(() => {
     const onMsg = (e: MessageEvent) => {
       if (e.data && e.data.type === 'fuerzafit-dni' && e.data.dni) {
@@ -160,7 +186,19 @@ export const AdminAccessControlView: React.FC = () => {
       }
     };
     window.addEventListener('message', onMsg);
-    return () => window.removeEventListener('message', onMsg);
+    // Electron: escucha IPC
+    const wDesktop: any = (window as any).fuerzaFitDesktop;
+    let cleanup: any = null;
+    if (wDesktop && wDesktop.onDniFromPopup) {
+      wDesktop.onDniFromPopup((dni: string) => {
+        setDniInput(String(dni));
+        handleDniAccess(String(dni));
+      });
+    }
+    return () => {
+      window.removeEventListener('message', onMsg);
+      if (cleanup) cleanup();
+    };
   }, [handleDniAccess]);
 
   const handleManualOpen = () => {

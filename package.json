@@ -9,7 +9,10 @@
     "start": "node dist/server.cjs",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "desktop": "electron electron/main.js",
+    "desktop:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && electron electron/main.js\"",
+    "desktop:build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs && electron-builder --win --publish never"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
@@ -33,10 +36,22 @@
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",
+    "concurrently": "^8.2.2",
+    "electron": "^30.0.0",
+    "electron-builder": "^24.9.1",
     "esbuild": "^0.25.0",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
-    "vite": "^6.2.3"
+    "vite": "^6.2.3",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.fuerzafit.gym",
+    "productName": "FuerzaFit Gym",
+    "files": ["dist/**/*", "electron/**/*", "package.json"],
+    "directories": { "buildResources": "assets" },
+    "win": { "target": "nsis", "icon": "public/assets/icon.png" },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true }
   }
 }
