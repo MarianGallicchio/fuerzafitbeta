@@ -5,8 +5,8 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
-    // GitHub Pages necesita base /FuerzaFit/ (custom domain usa /)
-    base: process.env.GITHUB_PAGES === 'true' ? '/FuerzaFit/' : '/',
+    // GitHub Pages: /fuerzafitbeta/ para este repo (FuerzaFit original usa /FuerzaFit/)
+    base: process.env.GITHUB_PAGES === 'true' ? '/fuerzafitbeta/' : '/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
