@@ -18,9 +18,11 @@ import {
   UserPlus,
   Hash,
   User,
-  IdCard
+  IdCard,
+  HelpCircle
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { SupportModal } from '../components/common/SupportModal';
 
 interface MemberLoginPageProps {
   initialPlanId?: string;
@@ -28,6 +30,7 @@ interface MemberLoginPageProps {
 
 export const MemberLoginPage: React.FC<MemberLoginPageProps> = ({ initialPlanId }) => {
   const {
+    currentUser,
     requestLoginOtp,
     verifyLoginOtp,
     requestPhoneOtp,
@@ -38,7 +41,26 @@ export const MemberLoginPage: React.FC<MemberLoginPageProps> = ({ initialPlanId 
     branches,
     selectedBranchId,
     plans,
+    requestPasswordReset,
   } = useGym();
+  const [showSupport, setShowSupport] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+
+  // Auto-redirect cuando el login realmente pegó (AppShell detecta currentUser)
+  if (currentUser) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 text-slate-100">
+        <div className="text-center space-y-3">
+          <div className="w-12 h-12 mx-auto rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 animate-pulse">
+            <CheckCircle2 className="w-6 h-6" />
+          </div>
+          <p className="font-black text-white">¡Listo, {currentUser.name.split(' ')[0]}!</p>
+          <p className="text-xs text-slate-400">Redirigiendo a tu panel...</p>
+        </div>
+      </div>
+    );
+  }
 
   const [memberView, setMemberView] = useState<'login_otp' | 'verify_otp' | 'login_password' | 'login_phone' | 'verify_phone' | 'register' | 'verify_register'>(
     'login_otp'
@@ -149,6 +171,14 @@ export const MemberLoginPage: React.FC<MemberLoginPageProps> = ({ initialPlanId 
     if (!res.success) setFeedbackMessage({ text: res.message, type: 'error' });
     else setFeedbackMessage({ text: res.message, type: 'success' });
   };
+  const handleForgot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    const res = await requestPasswordReset(forgotEmail || email);
+    setIsLoading(false);
+    setFeedbackMessage({ text: res.message, type: res.success ? 'success' : 'error' });
+    if (res.success) setShowForgot(false);
+  };
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!regName || !regEmail || !regDni) { setFeedbackMessage({ text: 'Completá nombre, email y DNI.', type: 'error' }); return; }
@@ -253,8 +283,23 @@ export const MemberLoginPage: React.FC<MemberLoginPageProps> = ({ initialPlanId 
             <form onSubmit={handleMemberPasswordLogin} className="space-y-3 text-xs">
               <div><label className="block text-slate-300 font-bold mb-1">Correo</label><div className="relative"><Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"/><input type="email" placeholder="socio@email.com" value={email} onChange={e=>setEmail(e.target.value)} className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:border-emerald-400 focus:outline-none"/></div></div>
               <div><label className="block text-slate-300 font-bold mb-1">Contraseña</label><div className="relative"><Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"/><input type="password" placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:border-emerald-400 focus:outline-none"/></div></div>
+              <div className="flex items-center justify-between">
+                <button type="button" onClick={()=>{ setShowForgot(!showForgot); setForgotEmail(email); }} className="text-[11px] text-amber-400 hover:underline flex items-center gap-1"><KeyRound className="w-3 h-3"/>¿Olvidaste tu contraseña?</button>
+                <button type="button" onClick={()=>setShowSupport(true)} className="text-[11px] text-slate-400 hover:text-white flex items-center gap-1"><HelpCircle className="w-3 h-3"/>Soporte</button>
+              </div>
               <button type="submit" disabled={isLoading} className="w-full mt-2 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold disabled:opacity-50 flex items-center justify-center gap-2">{isLoading?<><RefreshCw className="w-4 h-4 animate-spin"/>Entrando…</>:<span>Entrar como socio</span>}</button>
               <div className="flex justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800"><button type="button" onClick={()=>setMemberView('login_otp')} className="text-emerald-400">Volver a OTP</button><button type="button" onClick={()=>setMemberView('register')} className="text-slate-300">¿Sin cuenta? Registrate</button></div>
+              {showForgot && (
+                <form onSubmit={handleForgot} className="p-3 rounded-xl bg-slate-800 border border-amber-500/20 space-y-2">
+                  <p className="font-bold text-white">Recuperar cuenta</p>
+                  <p className="text-[11px] text-slate-400">Te enviamos un link a tu email. Revisá spam.</p>
+                  <div className="flex gap-2">
+                    <input type="email" value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} placeholder="tu@email.com" className="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white" required />
+                    <button type="submit" disabled={isLoading} className="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 text-xs font-black">Enviar link</button>
+                  </div>
+                  <a href="/reset-password" className="text-[11px] text-amber-400 hover:underline">Ya tengo el link → restablecer</a>
+                </form>
+              )}
             </form>
           )}
 
@@ -295,8 +340,14 @@ export const MemberLoginPage: React.FC<MemberLoginPageProps> = ({ initialPlanId 
       </div>
 
       <div className="p-4 text-center text-[11px] text-slate-500">
-        <span>Ingreso diario al gym siempre con DNI en recepción.</span>
+        <button onClick={()=>setShowSupport(true)} className="hover:text-white">¿Necesitás ayuda? Soporte →</button>
+        <span className="mx-1">·</span>
+        <a href="/soporte" className="hover:text-white">Centro de ayuda</a>
+        <span className="mx-1">·</span>
+        <a href="/reset-password" className="hover:text-white">Recuperar cuenta</a>
       </div>
+
+      <SupportModal isOpen={showSupport} onClose={()=>setShowSupport(false)} />
     </div>
   );
 };

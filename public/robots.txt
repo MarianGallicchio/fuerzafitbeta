@@ -1,0 +1,8 @@
+User-agent: *
+Disallow: /maestro
+Disallow: /superadmin
+Disallow: /admin
+Disallow: /socio
+Allow: /
+
+Sitemap: https://mariangallicchio.github.io/FuerzaFit/sitemap.xml

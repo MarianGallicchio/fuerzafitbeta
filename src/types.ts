@@ -211,7 +211,7 @@ export interface AttendanceRecord {
   userName: string;
   userAvatar?: string;
   timestamp: string;
-  accessMethod: 'qr_scanner' | 'manual_checkin' | 'turnstile' | 'dni_kiosk';
+  accessMethod: 'qr_scanner' | 'manual_checkin' | 'turnstile';
   status: 'granted' | 'denied';
   reason?: string;
   branchId: string;

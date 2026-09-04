@@ -1,19 +1,20 @@
 # FuerzaFit — Guía Beta para el gimnasio
 
-Versión lista para entregar a un gimnasio real con Supabase. Mismo código, **dos accesos separados** para que no se mezclen datos ni cuentas.
+Versión lista para entregar a un gimnasio real con Supabase. Mismo código, **tres accesos separados** para que no se mezclen datos ni cuentas.
 
-## 1. Los 2 links (mismo deploy, sin costo extra)
+## 1. Los 3 links (mismo deploy, sin costo extra)
 
 | Acceso | Link | Quién entra |
 |---|---|---|
-| Dueño / Staff | `https://TU-DOMINIO/?app=admin` | admin, reception, trainer |
-| Socios | `https://TU-DOMINIO/?app=socio` | member |
+| Maestro (SuperAdmin) | `https://TU-DOMINIO/maestro` (`/superadmin` alias) | superadmin |
+| Dueño / Staff | `https://TU-DOMINIO/admin` (`/?app=admin` legacy) | admin, reception, trainer |
+| Socios | `https://TU-DOMINIO/socio` (`/?app=socio` legacy) | member |
 
-- Si una cuenta de socio intenta entrar por `?app=admin` (o al revés), ve una pantalla de bloqueo con botón al acceso correcto. No se mezcla la sesión.
+- Si una cuenta de socio intenta entrar por `/admin` (o al revés), ve una pantalla de bloqueo con botón al acceso correcto. No se mezcla la sesión.
 - El login de cada link está bloqueado a su rol (no hay pestaña para cruzar).
-- El dueño tiene un botón **"Abrir App de Socios"** que abre `?app=socio` en pestaña nueva (sin cerrar su sesión).
+- La Zona Maestra (`/maestro`) solo acepta `profiles.role='superadmin'` (guard `is_superadmin()`).
 
-Compat: también sirven `?admin=1` y `?socio=1`. Sin parámetro (`full`) = ambos roles (solo desarrollo).
+Compat: también sirven `?admin=1`, `?socio=1`, `?app=maestro`. Sin parámetro (`full`) = landing.
 
 ## 2. Flujo de acceso: DNI diario + QR solo alta
 
@@ -27,13 +28,15 @@ Compat: también sirven `?admin=1` y `?socio=1`. Sin parámetro (`full`) = ambos
 1. Crear proyecto en Supabase.
 2. **SQL Editor → Run** con `supabase_schema.sql` (crea tablas + RLS + seed).
 3. **SQL Editor → Run** con `supabase_beta_hardening.sql` (cierra lecturas/escrituras cruzadas + DNI único).
-4. **Authentication → Sign In / Providers → Email**: activar Email + OTP. Desactivar "Confirm email" si querés alta inmediata en mostrador.
-5. Copiar `.env.example` a `.env` y completar:
+4. **SQL Editor → Run** con `supabase_superadmin.sql` (Zona Maestra: `tenant_subscriptions`, `tenant_invoices`, `feature_flags`, etc.) y `supabase_migration_discount.sql` si venís de versión anterior.
+5. **Authentication → Sign In / Providers → Email**: activar Email + OTP. Desactivar "Confirm email" si querés alta inmediata en mostrador.
+6. Crear tu superadmin: `update profiles set role='superadmin' where email='tu@email'` o insert seed del SQL.
+7. Copiar `.env.example` a `.env` y completar:
    - `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
    - `VITE_DEMO_MODE="false"` (obligatorio en beta)
-   - `VITE_APP_MODE="full"` (los links `?app=` hacen el resto)
+   - `VITE_APP_MODE="full"` (los links hacen el resto)
    - `GEMINI_API_KEY` (opcional; sin clave hay respuestas de respaldo)
-6. `npm install` → `npm run dev` (local) o `npm run build` + `npm start` (prod).
+8. `npm install` → `npm run dev` (local) o `npm run build` + `npm start` (prod).
 
 ## 4. Alta del gimnasio beta
 
@@ -48,6 +51,7 @@ Compat: también sirven `?admin=1` y `?socio=1`. Sin parámetro (`full`) = ambos
 - **Persistencia**: `createGroupClass` ahora inserta en Supabase (antes hacía update y se perdía); `attendance` siempre guarda `gymId`.
 - **Credencial socio**: DNI grande + QR chico de alta, sin "token dinámico" falso.
 - **DNI obligatorio y único** en alta de socios + índice único `(gym_id, dni)` en Supabase.
+- **Zona Maestra** (`/maestro`): nueva capa SuperAdmin con `src/components/maestro/*`, `supabase_superadmin.sql`, y `server.ts` endpoints `/api/superadmin/*`. Dashboard MRR, listado en vivo con ficha detalle, facturación global, logs y soporte.
 
 ## 6. Checklist antes de entregar
 
