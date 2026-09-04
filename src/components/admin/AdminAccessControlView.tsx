@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useGym } from '../../context/GymContext';
 import { User } from '../../types';
 import {
-  QrCode,
   CheckCircle2,
   XCircle,
   AlertTriangle,
@@ -13,7 +12,8 @@ import {
   IdCard,
   UserCheck,
   Building2,
-  Sparkles
+  Sparkles,
+  Maximize2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 

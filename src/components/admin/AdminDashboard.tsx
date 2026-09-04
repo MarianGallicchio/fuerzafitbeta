@@ -5,7 +5,7 @@ import {
   Users,
   CreditCard,
   Calendar,
-  QrCode,
+  IdCard,
   TrendingUp,
   AlertTriangle,
   CheckCircle2,
@@ -189,8 +189,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigateTab })
               onClick={() => onNavigateTab('access')}
               className="py-2.5 px-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 flex items-center gap-2 transition-all active:scale-95"
             >
-              <QrCode className="w-4 h-4" />
-              <span>Abrir Molinete QR</span>
+              <IdCard className="w-4 h-4" />
+              <span>Abrir Molinete DNI</span>
             </button>
 
             <button
@@ -293,7 +293,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigateTab })
         </div>
 
         {/* -----------------------------------------------------------------------
-            BENTO ITEM 4: QR Turnstile High-Impact CTA Block (Col Span: 4 on LG)
+            BENTO ITEM 4: DNI Turnstile High-Impact CTA Block (Col Span: 4 on LG)
             ----------------------------------------------------------------------- */}
         <div
           onClick={() => onNavigateTab('access')}
@@ -307,10 +307,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigateTab })
               Terminal de Acceso
             </div>
             <h3 className="text-xl font-black uppercase tracking-tight leading-tight">
-              Control Molinete QR
+              Control Molinete DNI
             </h3>
             <p className="text-xs text-slate-900/80 font-medium">
-              Escanear credenciales de socios con validación en milisegundos.
+              Ingreso por DNI con teclado. Subventana para el socio.
             </p>
           </div>
 
@@ -319,7 +319,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigateTab })
               {todayAttendance.length} ingresos hoy
             </div>
             <div className="w-10 h-10 rounded-2xl bg-slate-950 text-emerald-400 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-              <QrCode className="w-5 h-5" />
+              <IdCard className="w-5 h-5" />
             </div>
           </div>
         </div>
@@ -429,11 +429,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigateTab })
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
-                <QrCode className="w-4 h-4" />
+                <IdCard className="w-4 h-4" />
               </div>
               <div>
                 <h3 className="font-extrabold text-base text-white">Molinete en Vivo</h3>
-                <p className="text-xs text-slate-400">Últimos accesos escaneados</p>
+                <p className="text-xs text-slate-400">Últimos accesos por DNI</p>
               </div>
             </div>
 
