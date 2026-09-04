@@ -16,7 +16,6 @@ import { MemberLoginPage } from './pages/MemberLoginPage';
 import { AdminLoginPage } from './pages/AdminLoginPage';
 import { MaestroLoginPage } from './pages/MaestroLoginPage';
 import { SuperAdminLayout } from './components/superadmin/SuperAdminLayout';
-import { KioskAccessView } from './components/common/KioskAccessView';
 import { AiChatWidget } from './components/common/AiChatWidget';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { SupportModal } from './components/common/SupportModal';
@@ -79,11 +78,6 @@ const AppShell: React.FC = () => {
 
   // Guard: si hay sesión pero el rol no pertenece a este link, bloquear
   const roleAllowed = !currentUser || isRoleAllowedInMode(currentUser.role, appMode);
-
-  // Kiosco es terminal pública — no requiere login, va directo
-  if (appMode === 'kiosk') {
-    return <KioskAccessView />;
-  }
 
   // Páginas públicas sin auth (reset-password, soporte)
   const isResetPassword = typeof window !== 'undefined' && window.location.pathname.toLowerCase().includes('reset-password');

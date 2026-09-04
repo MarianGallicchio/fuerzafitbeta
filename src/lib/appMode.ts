@@ -1,13 +1,12 @@
-// FuerzaFit — Ecosistema 3 apps compartiendo Supabase
+// FuerzaFit Beta — 3 apps compartiendo Supabase
 //  - Maestro:    /maestro (/superadmin alias) — SuperAdmin
 //  - Panel:      /admin — Dueño/Staff
-//  - Kiosco:     /kiosco (?app=kiosk) — Molinete Tablet
-//  - Socio:      /socio — App móvil/web
+//  - Socios:     /socio — Redirige a App Móvil (Flutter) — ver /mobile
 //  - Full:       / — Landing
 
-export type AppMode = 'full' | 'admin' | 'member' | 'kiosk' | 'superadmin';
+export type AppMode = 'full' | 'admin' | 'member' | 'superadmin';
 
-const VALID_MODES: AppMode[] = ['full', 'admin', 'member', 'kiosk', 'superadmin'];
+const VALID_MODES: AppMode[] = ['full', 'admin', 'member', 'superadmin'];
 
 function normalizeMode(raw: string | null | undefined): AppMode | null {
   if (!raw) return null;
@@ -15,21 +14,17 @@ function normalizeMode(raw: string | null | undefined): AppMode | null {
   if (v === 'superadmin' || v === 'maestro' || v === 'super_admin' || v === 'master') return 'superadmin';
   if (v === 'admin' || v === 'owner' || v === 'staff' || v === 'dueno' || v === 'dueño') return 'admin';
   if (v === 'socio' || v === 'socios' || v === 'member' || v === 'members' || v === 'atleta') return 'member';
-  if (v === 'kiosco' || v === 'kiosk' || v === 'molinete' || v === 'totem') return 'kiosk';
   if (v === 'full' || v === 'all' || v === 'completo') return 'full';
   return null;
 }
 
 export function getAppMode(): AppMode {
-  // 1. Path dedicado — prioridad máxima, soporta base /FuerzaFit/
   try {
     const path = window.location.pathname.toLowerCase();
     if (/(^|\/)(superadmin|super_admin|maestro|master)(\/|$|\?|#)/.test(path)) return 'superadmin';
-    if (/(^|\/)(kiosco|kiosk|molinete|totem)(\/|$|\?|#)/.test(path)) return 'kiosk';
     if (/(^|\/)(admin|panel|dueno|dueño|staff)(\/|$|\?|#)/.test(path)) return 'admin';
     if (/(^|\/)(socio|socios|member|members|atleta|login|ingreso)(\/|$|\?|#)/.test(path)) return 'member';
   } catch {}
-  // 2. Query param ?app=
   try {
     const params = new URLSearchParams(window.location.search);
     const fromQuery =
@@ -37,11 +32,9 @@ export function getAppMode(): AppMode {
       normalizeMode(params.get('mode')) ||
       (params.has('admin') ? ('admin' as AppMode) : null) ||
       (params.has('socio') || params.has('member') ? ('member' as AppMode) : null) ||
-      (params.has('kiosco') || params.has('kiosk') || params.has('molinete') ? ('kiosk' as AppMode) : null) ||
       (params.has('maestro') || params.has('superadmin') ? ('superadmin' as AppMode) : null);
     if (fromQuery && VALID_MODES.includes(fromQuery)) return fromQuery;
   } catch {}
-  // 3. Env
   const fromEnv = normalizeMode((import.meta as any)?.env?.VITE_APP_MODE as string | undefined);
   if (fromEnv && VALID_MODES.includes(fromEnv)) return fromEnv;
   return 'full';
@@ -71,7 +64,7 @@ export function getAppModeConfig(mode: AppMode): AppModeConfig {
       title: 'Maestro FuerzaFit',
       subtitle: 'Control total de tenants, facturación y soporte.',
       allowedRoles: ['superadmin'],
-      loginHint: 'Solo cuentas SuperAdmin. Acceso con token maestro.'
+      loginHint: 'Solo cuentas SuperAdmin.'
     };
   }
   if (mode === 'admin') {
@@ -89,19 +82,9 @@ export function getAppModeConfig(mode: AppMode): AppModeConfig {
       mode,
       badge: 'App Socios · Beta',
       title: 'Mi Entrenamiento',
-      subtitle: 'Tu rutina, clases, progreso y credencial con DNI.',
+      subtitle: 'Tu rutina, clases, progreso y credencial con DNI. Ahora también en App Móvil.',
       allowedRoles: ['member'],
-      loginHint: 'Ingresá con tu cuenta de socio. Ingreso por DNI en recepción.'
-    };
-  }
-  if (mode === 'kiosk') {
-    return {
-      mode,
-      badge: 'Terminal Molinete / Tótem · DNI',
-      title: 'Control de Acceso',
-      subtitle: 'Terminal de autoservicio para ingreso por DNI.',
-      allowedRoles: ['superadmin', 'admin', 'reception', 'trainer', 'member'],
-      loginHint: 'Terminal pública de ingreso por DNI para molinete o tótem.'
+      loginHint: 'Ingresá con tu cuenta de socio. Recomendado: usar la App Móvil Flutter.'
     };
   }
   return {
@@ -117,7 +100,6 @@ export function getAppModeConfig(mode: AppMode): AppModeConfig {
 export function isRoleAllowedInMode(role: string | undefined, mode: AppMode): boolean {
   if (mode === 'full') return true;
   if (mode === 'superadmin') return role === 'superadmin';
-  if (mode === 'kiosk') return true; // kiosco es público, valida DNI contra DB
   const cfg = getAppModeConfig(mode);
   return !!role && cfg.allowedRoles.includes(role);
 }
@@ -138,21 +120,20 @@ export function buildModeUrl(mode: Exclude<AppMode, 'full'>): string {
     const url = new URL(window.location.href);
     url.searchParams.delete('app');
     url.searchParams.delete('mode');
-    url.searchParams.delete('kiosco'); url.searchParams.delete('kiosk'); url.searchParams.delete('molinete');
     url.hash = '';
     const base = getBasePrefix();
-    const seg = mode === 'admin' ? '/admin' : mode === 'member' ? '/socio' : mode === 'kiosk' ? '/kiosco' : '/maestro';
+    const seg = mode === 'admin' ? '/admin' : mode === 'member' ? '/socio' : '/maestro';
     url.pathname = `${base}${seg}`;
     return url.toString();
   } catch {
-    return mode === 'admin' ? '/admin' : mode === 'member' ? '/socio' : mode === 'kiosk' ? '/kiosco' : '/maestro';
+    return mode === 'admin' ? '/admin' : mode === 'member' ? '/socio' : '/maestro';
   }
 }
 
 export function navigateToMode(mode: Exclude<AppMode, 'full'>): void {
   try {
     const base = getBasePrefix();
-    const seg = mode === 'admin' ? '/admin' : mode === 'member' ? '/socio' : mode === 'kiosk' ? '/kiosco' : '/maestro';
+    const seg = mode === 'admin' ? '/admin' : mode === 'member' ? '/socio' : '/maestro';
     const target = `${base}${seg}`;
     if (window.location.pathname.toLowerCase() !== target.toLowerCase()) {
       window.history.pushState({}, '', target);
@@ -168,7 +149,7 @@ export function navigateToPath(path: string): void {
     const base = getBasePrefix();
     let target = path;
     if (base && path.startsWith('/') && !path.toLowerCase().startsWith(base.toLowerCase())) {
-      if (['/admin','/socio','/kiosco','/kiosk','/maestro','/superadmin','/','/login','/ingreso'].some(r => path === r || path.startsWith(r + '/') || path.startsWith(r + '?'))) {
+      if (['/admin','/socio','/maestro','/superadmin','/','/login','/ingreso'].some(r => path === r || path.startsWith(r + '/') || path.startsWith(r + '?'))) {
         target = `${base}${path}`;
       }
     }

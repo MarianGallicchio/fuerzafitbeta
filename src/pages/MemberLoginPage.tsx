@@ -214,6 +214,16 @@ export const MemberLoginPage: React.FC<MemberLoginPageProps> = ({ initialPlanId 
 
       <div className="flex-1 flex items-center justify-center p-4 sm:p-6 bg-[radial-gradient(ellipse_at_top,_rgba(16,185,129,0.12),_transparent_60%)]">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4">
+          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">📱</span>
+              <div>
+                <p className="text-xs font-black text-white">App Móvil Socios</p>
+                <p className="text-[11px] text-slate-400">La sección de socios también está en la app Flutter</p>
+              </div>
+            </div>
+            <a href="https://github.com/MarianGallicchio/fuerzafitbeta/releases" target="_blank" className="px-3 py-1.5 rounded-xl bg-emerald-500 text-slate-950 text-xs font-black">Descargar APK</a>
+          </div>
           <div className="text-center space-y-1">
             <div className="w-12 h-12 mx-auto rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400"><User className="w-6 h-6" /></div>
             <h1 className="text-xl font-black text-white">Ingreso Socios</h1>
