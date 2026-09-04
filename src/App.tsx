@@ -118,8 +118,6 @@ const AppShell: React.FC = () => {
             ? 'bg-amber-400/10 text-amber-300 border-amber-400/20'
             : appMode === 'superadmin'
             ? 'bg-violet-500/10 text-violet-300 border-violet-500/20'
-            : appMode === 'kiosk'
-            ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
             : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
         }`}>
           {modeConfig.badge} · {modeConfig.loginHint}

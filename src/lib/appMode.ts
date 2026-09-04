@@ -1,8 +1,8 @@
-// FuerzaFit Beta — 3 apps compartiendo Supabase
-//  - Maestro:    /maestro (/superadmin alias) — SuperAdmin
-//  - Panel:      /admin — Dueño/Staff
-//  - Socios:     /socio — Redirige a App Móvil (Flutter) — ver /mobile
+// FuerzaFit Beta — 2 apps + Landing (sin kiosco)
+//  - Panel:      /admin — Dueño/Staff (incluye molinete DNI)
+//  - Socios:     /socio — Web + anclaje a App Móvil Flutter (mobile/)
 //  - Full:       / — Landing
+//  Kiosco eliminado: el ingreso por DNI es un pop-up que el admin muestra al socio, sin ruta nueva.
 
 export type AppMode = 'full' | 'admin' | 'member' | 'superadmin';
 
@@ -23,6 +23,7 @@ export function getAppMode(): AppMode {
     const path = window.location.pathname.toLowerCase();
     if (/(^|\/)(superadmin|super_admin|maestro|master)(\/|$|\?|#)/.test(path)) return 'superadmin';
     if (/(^|\/)(admin|panel|dueno|dueño|staff)(\/|$|\?|#)/.test(path)) return 'admin';
+    // /socio incluye /socio y /fuerzafitbeta/socio, sin kiosco
     if (/(^|\/)(socio|socios|member|members|atleta|login|ingreso)(\/|$|\?|#)/.test(path)) return 'member';
   } catch {}
   try {

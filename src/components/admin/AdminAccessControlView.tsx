@@ -13,10 +13,7 @@ import {
   IdCard,
   UserCheck,
   Building2,
-  Sparkles,
-  Download,
-  MonitorSmartphone,
-  ExternalLink
+  Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -31,7 +28,6 @@ export const AdminAccessControlView: React.FC = () => {
   const {
     validateQrAccess,
     validateDniAccess,
-    recordEmergencyOpen,
     users,
     memberships,
     getPlanById,
@@ -41,7 +37,6 @@ export const AdminAccessControlView: React.FC = () => {
   } = useGym();
 
   const [dniInput, setDniInput] = useState('');
-  const [qrInput, setQrInput] = useState('');
   const [lastScanResult, setLastScanResult] = useState<ScanResult | null>(null);
 
   const [isScanning, setIsScanning] = useState(false);
@@ -95,18 +90,10 @@ export const AdminAccessControlView: React.FC = () => {
   const handleDniAccess = (dni?: string) => {
     const value = (dni ?? dniInput).trim();
     if (!value) return;
-    runValidation(() => validateDniAccess(value, selectedBranchId, 'manual_checkin'));
+    runValidation(() => validateDniAccess(value));
   };
 
-  // QR reservado al alta de nuevos socios (primer ingreso / credencial de alta)
-  const handleQrAlta = (qrToken?: string) => {
-    const value = (qrToken ?? qrInput).trim();
-    if (!value) return;
-    runValidation(() => validateQrAccess(value, selectedBranchId, 'qr_scanner'));
-  };
-
-  // Simulación desde la lista: usa el QR REAL de la membresía (antes generaba
-  // un token falso FF_QR_... que siempre daba NOT_FOUND) y también el DNI real.
+  // Simulación desde la lista: usa el DNI real
   const handleSimulateMemberDni = (member: User) => {
     if (member.dni) {
       setDniInput(member.dni);
@@ -119,49 +106,65 @@ export const AdminAccessControlView: React.FC = () => {
     }
   };
 
-  const handleSimulateMemberQrAlta = (member: User) => {
-    const mem = memberships.find(m => m.userId === member.id);
-    if (mem?.qrToken) {
-      setQrInput(mem.qrToken);
-      handleQrAlta(mem.qrToken);
-    } else {
-      setLastScanResult({
-        allowed: false,
-        message: `${member.name} aún no tiene credencial QR de alta. Generala desde Socios.`
-      });
+  // Pop-up DNI para que el socio tipee - sin QR, sin ruta nueva
+  const openDniPopup = () => {
+    const w = window.open('', '_blank', 'width=420,height=560,left=200,top=100');
+    if (!w) {
+      alert('Pop-up bloqueado. Permitir ventanas emergentes para este sitio.');
+      return;
     }
+    w.document.write(`
+      <html><head><title>DNI - FuerzaFit</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1"/>
+      <style>
+        body{margin:0;font-family:system-ui;background:#020617;color:#e2e8f0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+        .card{background:#0f172a;border:1px solid #1e293b;border-radius:24px;padding:24px;width:100%;max-width:360px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+        h1{font-size:18px;font-weight:900;color:#fff;margin:0 0 4px}
+        p{font-size:12px;color:#94a3b8;margin:0 0 16px}
+        input{width:100%;padding:16px;border-radius:16px;border:2px solid #1e293b;background:#020617;color:#fff;font-size:22px;font-family:monospace;letter-spacing:0.2em;text-align:center;outline:none}
+        input:focus{border-color:#10b981}
+        button{width:100%;margin-top:12px;padding:14px;border-radius:16px;border:0;background:#10b981;color:#020617;font-weight:900;font-size:14px;cursor:pointer}
+        button:active{transform:scale(0.98)}
+        .hint{font-size:11px;color:#64748b;margin-top:12px}
+      </style></head><body>
+      <div class="card">
+        <h1>Ingresá tu DNI</h1>
+        <p>Te lo muestra el admin. Tipéalo y presioná Ingresar.</p>
+        <input id="dni" inputmode="numeric" autocomplete="off" placeholder="38.456.789" maxlength="9" autofocus />
+        <button id="btn">Ingresar →</button>
+        <div class="hint">Se valida al instante en recepción. No se guarda el QR.</div>
+      </div>
+      <script>
+        const inp=document.getElementById('dni');
+        const btn=document.getElementById('btn');
+        function send(){
+          const v=inp.value.replace(/[^0-9]/g,'');
+          if(!v) return;
+          if(window.opener){ window.opener.postMessage({type:'fuerzafit-dni', dni:v}, '*'); }
+          window.close();
+        }
+        btn.onclick=send;
+        inp.onkeydown=e=>{ if(e.key==='Enter') send(); };
+        inp.focus();
+      <\/script></body></html>
+    `);
+    w.document.close();
   };
+
+  // Escucha DNI tipeado en el pop-up
+  React.useEffect(() => {
+    const onMsg = (e: MessageEvent) => {
+      if (e.data && e.data.type === 'fuerzafit-dni' && e.data.dni) {
+        setDniInput(String(e.data.dni));
+        handleDniAccess(String(e.data.dni));
+      }
+    };
+    window.addEventListener('message', onMsg);
+    return () => window.removeEventListener('message', onMsg);
+  }, [handleDniAccess]);
 
   const handleManualOpen = () => {
-    recordEmergencyOpen('Apertura manual autorizada desde recepción (Apertura de cortesía)');
-    setLastScanResult({
-      allowed: true,
-      message: 'Molinete desbloqueado manualmente por recepción (Apertura de cortesía autorizada).'
-    });
-    playFeedback(true);
-  };
-
-  const handleExportCsv = () => {
-    if (attendanceRecords.length === 0) return;
-    const headers = ['Fecha', 'Hora', 'Socio', 'Membresía', 'Sede', 'Método', 'Resultado', 'Detalle'];
-    const rows = attendanceRecords.map(rec => [
-      new Date(rec.timestamp).toLocaleDateString('es-AR'),
-      new Date(rec.timestamp).toLocaleTimeString('es-AR'),
-      `"${(rec.userName || '').replace(/"/g, '""')}"`,
-      `"${(rec.planName || 'Plan General').replace(/"/g, '""')}"`,
-      `"${(branchNameOf(rec.branchId) || '').replace(/"/g, '""')}"`,
-      rec.accessMethod === 'qr_scanner' ? 'QR alta' : rec.accessMethod === 'manual_checkin' ? 'DNI' : rec.accessMethod === 'dni_kiosk' ? 'Kiosco DNI' : 'Molinete manual',
-      rec.status === 'granted' ? 'Permitido' : 'Denegado',
-      `"${(rec.reason || '').replace(/"/g, '""')}"`
-    ]);
-    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `accesos_fuerzafit_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    alert('Molinete desbloqueado manualmente por recepción (Apertura de cortesía).');
   };
 
   return (
@@ -176,34 +179,19 @@ export const AdminAccessControlView: React.FC = () => {
             </span>
             <span className="text-xs text-slate-400">Molinete / Torniquete Sede {currentBranch?.name}</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-black text-white">Acceso por DNI + QR de alta</h1>
+          <h1 className="text-xl sm:text-2xl font-black text-white">Acceso por DNI</h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Uso diario con <strong className="text-slate-200">DNI del socio</strong>. El QR se usa solo para el alta de nuevos socios.
-            Valida cuota activa, días de gracia y sede en milisegundos.
+            El socio tipea su DNI en la ventana que le muestra el admin. Sin QR en molinete.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <a
-            id="btn-open-kiosk-totem"
-            href="/kiosco"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="py-3 px-5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-500/20"
-          >
-            <MonitorSmartphone className="w-4 h-4" />
-            <span>Abrir Pantalla Tótem / Kiosco DNI</span>
-            <ExternalLink className="w-3.5 h-3.5 opacity-70" />
-          </a>
-
-          <button
-            onClick={handleManualOpen}
-            className="py-3 px-5 rounded-2xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-2 transition-colors"
-          >
-            <DoorOpen className="w-4 h-4 text-emerald-400" />
-            <span>Apertura Manual de Emergencia</span>
-          </button>
-        </div>
+        <button
+          onClick={handleManualOpen}
+          className="py-3 px-5 rounded-2xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-2 transition-colors"
+        >
+          <DoorOpen className="w-4 h-4 text-emerald-400" />
+          <span>Apertura Manual de Emergencia</span>
+        </button>
       </div>
 
       {/* Main Validation Stage */}
@@ -284,10 +272,10 @@ export const AdminAccessControlView: React.FC = () => {
             )}
           </div>
 
-          {/* 1) DNI — flujo diario principal */}
-          <div className="space-y-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4">
+          {/* DNI — único flujo, con pop-up para el socio */}
+          <div className="space-y-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4">
             <p className="text-[11px] font-black uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
-              <IdCard className="w-4 h-4" /> 1 · Acceso diario por DNI
+              <IdCard className="w-4 h-4" /> Acceso diario por DNI — pop-up para el socio
             </p>
             <div className="flex gap-2">
               <input
@@ -306,33 +294,14 @@ export const AdminAccessControlView: React.FC = () => {
                 <UserCheck className="w-4 h-4" /> Validar DNI
               </button>
             </div>
-          </div>
-
-          {/* 2) QR — solo alta de nuevos socios */}
-          <div className="space-y-2 rounded-2xl border border-slate-700/70 bg-slate-800/30 p-4">
-            <p className="text-[11px] font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-              <QrCode className="w-4 h-4 text-amber-300" /> 2 · QR solo para alta de nuevos socios
-            </p>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Pegar token QR de alta..."
-                value={qrInput}
-                onChange={e => setQrInput(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleQrAlta(); }}
-                className="flex-1 p-3 rounded-2xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 focus:border-amber-300 focus:outline-none font-mono"
-              />
-              <button
-                onClick={() => handleQrAlta()}
-                className="px-5 py-3 rounded-2xl bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-100 font-bold text-xs"
-              >
-                Validar QR
-              </button>
-            </div>
-            <p className="text-[11px] text-slate-500 flex items-start gap-1.5">
-              <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-300" />
-              <span>El QR es la credencial de alta / primer ingreso. No lo uses para el control diario: ese es siempre por DNI.</span>
-            </p>
+            <button
+              onClick={openDniPopup}
+              className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-2"
+            >
+              <Maximize2 className="w-4 h-4 text-emerald-400" />
+              <span>Abrir ventana DNI para el socio (pop-up)</span>
+            </button>
+            <p className="text-[11px] text-slate-400">El admin abre esta ventana y la gira hacia el socio para que tipee su DNI. Sin QR, sin ruta nueva.</p>
           </div>
 
         </div>
@@ -341,7 +310,7 @@ export const AdminAccessControlView: React.FC = () => {
         <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-extrabold text-base text-white">Socios del gimnasio</h3>
-            <span className="text-[11px] text-slate-400">DNI = ingreso · QR = alta</span>
+            <span className="text-[11px] text-slate-400">DNI = ingreso</span>
           </div>
 
           <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
@@ -378,16 +347,9 @@ export const AdminAccessControlView: React.FC = () => {
                     <div className="flex gap-2 mt-2">
                       <button
                         onClick={() => handleSimulateMemberDni(member)}
-                        className="flex-1 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-[11px] font-bold flex items-center justify-center gap-1 transition-colors"
+                        className="w-full py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-[11px] font-bold flex items-center justify-center gap-1 transition-colors"
                       >
                         <IdCard className="w-3.5 h-3.5" /> Ingreso DNI
-                      </button>
-                      <button
-                        onClick={() => handleSimulateMemberQrAlta(member)}
-                        title="Simular escaneo del QR de alta"
-                        className="flex-1 py-1.5 rounded-xl bg-slate-700/50 hover:bg-slate-700 border border-slate-600/60 text-slate-200 text-[11px] font-bold flex items-center justify-center gap-1 transition-colors"
-                      >
-                        <QrCode className="w-3.5 h-3.5" /> QR alta
                       </button>
                     </div>
                   </div>
@@ -401,24 +363,10 @@ export const AdminAccessControlView: React.FC = () => {
 
       {/* Attendance Records Log Table */}
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <h3 className="font-extrabold text-base text-white flex items-center gap-2">
-            <Clock className="w-5 h-5 text-emerald-400" />
-            <span>Historial de Accesos Registrados Hoy</span>
-            <span className="text-xs text-slate-500 font-normal">({attendanceRecords.length} registros)</span>
-          </h3>
-
-          {attendanceRecords.length > 0 && (
-            <button
-              id="btn-export-access-csv"
-              onClick={handleExportCsv}
-              className="py-2 px-3.5 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-200 font-bold text-xs flex items-center gap-2 transition-colors self-start sm:self-auto cursor-pointer"
-            >
-              <Download className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Exportar Historial (CSV)</span>
-            </button>
-          )}
-        </div>
+        <h3 className="font-extrabold text-base text-white flex items-center gap-2">
+          <Clock className="w-5 h-5 text-emerald-400" />
+          <span>Historial de Accesos Registrados Hoy</span>
+        </h3>
 
         <div className="overflow-x-auto">
           <table className="w-full text-xs text-left">
@@ -467,18 +415,7 @@ export const AdminAccessControlView: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-3 text-right pr-3 text-slate-400 text-[11px]">
-                      {rec.reason}{' '}
-                      <span className="text-slate-500 font-medium">
-                        {rec.accessMethod === 'qr_scanner'
-                          ? '· QR alta'
-                          : rec.accessMethod === 'manual_checkin'
-                          ? '· DNI'
-                          : rec.accessMethod === 'dni_kiosk'
-                          ? '· Tótem DNI'
-                          : rec.accessMethod === 'turnstile'
-                          ? '· Molinete manual'
-                          : ''}
-                      </span>
+                      {rec.reason} {rec.accessMethod === 'qr_scanner' ? '· QR alta' : rec.accessMethod === 'manual_checkin' ? '· DNI' : ''}
                     </td>
                   </tr>
                 ))
